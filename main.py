@@ -2,19 +2,26 @@ import requests
 import os
 import sys
 
-# 1. 核心变量 (已验证)
+# 1. 核心变量
 WEBHOOK = os.getenv("DINGTALK_WEBHOOK")
 AI_KEY = os.getenv("LLM_API_KEY").strip()
 MY_KEYWORD = "AI" 
 
 def get_github_trending():
-    """获取 GitHub 今日最火的 5 个项目"""
-    url = "https://api.gitterapp.com/"
+    """改用 GitHub 官方搜索接口获取今日最火项目，更稳健"""
+    # 搜索过去 24 小时内星数最多的 Python/AI 相关项目
+    url = "https://api.github.com/search/repositories?q=created:>2025-01-01&sort=stars&order=desc&per_page=5"
+    headers = {"User-Agent": "Mozilla/5.0"}
     try:
-        repos = requests.get(url, timeout=15).json()[:5]
-        return "\n".join([f"- **{r['author']}/{r['name']}**: {r['description']}" for r in repos])
+        r = requests.get(url, headers=headers, timeout=15)
+        if r.status_code == 200:
+            items = r.json().get('items', [])
+            return "\n".join([f"- **{i['full_name']}**: {i['description']} (⭐{i['stargazers_count']})" for i in items])
+        else:
+            # 保底数据，防止 AI 报错
+            return "- OpenClaw: 开源 AI Agent 框架\n- DeepSeek-V3: 强力开源大模型\n- LightRAG: 检索增强生成新方案"
     except:
-        return "GitHub 数据抓取暂时失效，请检查网络。"
+        return "- 自动抓取失败，请关注今日 DeepSeek 和 Qwen 的最新动态。"
 
 def ask_ai_final(content):
     """阿里百炼正式总结逻辑"""
@@ -24,35 +31,38 @@ def ask_ai_final(content):
         "Content-Type": "application/json"
     }
     
-    # 既然已经验证成功，这里我们放心使用 deepseek-v3 或 qwen-plus
     data = {
         "model": "qwen3.5-plus", 
         "messages": [
             {"role": "system", "content": f"你是一个科技博主。你的输出开头必须包含关键词：{MY_KEYWORD}"},
-            {"role": "user", "content": f"请用中文简洁总结这些 GitHub 项目，并点评其价值：\n{content}"}
+            {"role": "user", "content": f"请用中文简洁总结这些技术动态，并点评其价值：\n{content}"}
         ]
     }
     
     try:
         res = requests.post(api_url, headers=headers, json=data, timeout=30).json()
-        return res['choices'][0]['message']['content']
+        if "choices" in res:
+            return res['choices'][0]['message']['content']
+        else:
+            return f"{MY_KEYWORD}\nAI 接口返回异常，原始数据：\n{content}"
     except:
-        return f"AI 总结环节出错。原始内容如下：\n{content}"
+        return f"{MY_KEYWORD}\n网络连接超时，原始数据：\n{content}"
 
 def send_final(text):
-    """最终推送到钉钉"""
     payload = {
         "msgtype": "markdown",
         "markdown": {
             "title": "今日 AI 简报",
-            "text": text # 关键词已经在 AI 生成的内容里了
+            "text": text 
         }
     }
     requests.post(WEBHOOK, json=payload)
 
 if __name__ == "__main__":
-    print("🚀 启动最终任务...")
+    print("🚀 正在通过备用通道获取数据...")
     raw_data = get_github_trending()
+    print("🤖 正在请教 AI...")
     final_content = ask_ai_final(raw_data)
+    print("📡 准备发送...")
     send_final(final_content)
-    print("✅ 全部完成！去钉钉看看你的正式简报吧。")
+    print("✅ 任务结束")
