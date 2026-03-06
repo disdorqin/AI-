@@ -5,7 +5,7 @@ import sys
 # 1. 核心配置
 WEBHOOK = os.getenv("DINGTALK_WEBHOOK")
 AI_KEY = os.getenv("LLM_API_KEY")
-MY_KEYWORD = "AI简报"  # 必须和钉钉机器人后台一致
+MY_KEYWORD = "AI"  # 必须和钉钉机器人后台一致
 
 def get_data():
     """获取 GitHub Trending"""
@@ -18,7 +18,7 @@ def get_data():
 def ask_ai(content):
     """阿里百炼专用调用逻辑"""
     # 阿里百炼兼容 OpenAI 的标准 Base URL
-    api_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions" 
+    api_url = "https://coding.dashscope.aliyuncs.com/v1" 
     
     headers = {
         "Authorization": f"Bearer {AI_KEY}",
@@ -28,7 +28,7 @@ def ask_ai(content):
     # 百炼模型名一定要写对，推荐使用以下两个之一：
     # "deepseek-v3" 或 "qwen-plus"
     data = {
-        "model": "deepseek-v3", 
+        "model": "qwen3-coder-plus", 
         "messages": [
             {"role": "system", "content": f"你是一个技术专家。输出必须包含关键词：{MY_KEYWORD}"},
             {"role": "user", "content": f"请用中文精炼总结以下技术新闻：\n{content}"}
