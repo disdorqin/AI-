@@ -19,7 +19,7 @@ def get_data():
 def ask_ai(content):
     """调用 AI 总结内容"""
     # 如果你是用 One API 或中转，请修改下面这个 URL
-    api_url = "https://api.deepseek.com/v1/chat/completions" 
+    api_url = "https://coding.dashscope.aliyuncs.com/v1" 
     
     headers = {
         "Authorization": f"Bearer {AI_KEY}",
@@ -27,7 +27,7 @@ def ask_ai(content):
     }
     
     data = {
-        "model": "deepseek-chat", # 请确认你的 API 支持这个模型名
+        "model": "qwen3.5-plus", # 请确认你的 API 支持这个模型名
         "messages": [{"role": "user", "content": f"请简要总结以下技术新闻：\n{content}"}],
         "temperature": 0.7
     }
