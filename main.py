@@ -1,21 +1,36 @@
 import requests
 import os
+import sys
 
-# 获取秘钥
-webhook = os.getenv("DINGTALK_WEBHOOK")
+# 1. 读取环境变量
+URL = os.getenv("DINGTALK_WEBHOOK")
+KEY = os.getenv("LLM_API_KEY")
 
-def test_push():
-    # 注意：这里的 text 必须包含你在钉钉后台设置的“关键词”！
-    # 假设你的关键词是“AI简报”
-    data = {
-        "msgtype": "text",
-        "text": {"content": "测试推送：这是一条来自 GitHub 的 AI简报 测试消息"}
+def send_ding(text):
+    # 【注意】请把下方的 'AI简报' 换成你钉钉机器人后台设置的实际关键词！
+    keyword = "AI简报" 
+    final_text = f"{keyword}\n\n{text}"
+    
+    payload = {
+        "msgtype": "markdown",
+        "markdown": {"title": "Daily News", "text": final_text}
     }
-    res = requests.post(webhook, json=data)
-    print(f"状态码: {res.status_code}")
-    print(f"返回结果: {res.text}")
+    
+    # 发送请求并获取结果
+    response = requests.post(URL, json=payload)
+    result = response.json()
+    
+    print(f"DingTalk Response: {result}")
+    
+    # 如果钉钉返回错误，直接让脚本报错退出，这样 Actions 就会变红提醒你
+    if result.get("errcode") != 0:
+        print(f"Error: DingTalk push failed! Message: {result.get('errmsg')}")
+        sys.exit(1)
+
+def get_simple_data():
+    return "- 项目: OpenClaw, 描述: 强大的本地智能体框架\n- 项目: DeepSeek-V3, 描述: 最强开源模型"
 
 if __name__ == "__main__":
-    test_push()
-
-
+    # 为了测试，我们先发一段简单的内容，排除 AI 干扰
+    test_content = get_simple_data()
+    send_ding(test_content)
