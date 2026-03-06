@@ -18,7 +18,7 @@ def get_data():
 def ask_ai(content):
     """阿里百炼专用调用逻辑"""
     # 阿里百炼兼容 OpenAI 的标准 Base URL
-    api_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+    api_url = "https://coding.dashscope.aliyuncs.com/v1"
     
     headers = {
         "Authorization": f"Bearer {AI_KEY}",
