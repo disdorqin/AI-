@@ -18,7 +18,8 @@ def diagnose_and_push():
 
     # --- 诊断 B: 阿里百炼 API 测试 ---
     # 使用阿里百炼标准兼容地址
-    api_url = "https://coding.dashscope.aliyuncs.com/v1"
+    # 修改这一行：使用百炼标准的通用 OpenAI 兼容地址
+    api_url = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
     
     headers = {
         "Authorization": f"Bearer {AI_KEY.strip()}", # strip() 防止前后空格干扰
