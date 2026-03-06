@@ -7,7 +7,7 @@ WEBHOOK = os.getenv("DINGTALK_WEBHOOK")
 AI_KEY = os.getenv("LLM_API_KEY")
 
 # 钉钉关键词：必须和你机器人设置里的一模一样！
-KEYWORD = "AI简报"
+KEYWORD = "AI"
 
 def get_github_trending():
     """抓取 GitHub Trending Top 5"""
