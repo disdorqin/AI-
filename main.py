@@ -2,96 +2,65 @@ import requests
 import os
 import sys
 
-# 1. 核心配置：从 GitHub Secrets 获取
+# 1. 核心配置
 WEBHOOK = os.getenv("DINGTALK_WEBHOOK")
 AI_KEY = os.getenv("LLM_API_KEY")
+MY_KEYWORD = "AI"  # 确保这四个字在你的钉钉机器人设置里
 
-# 钉钉关键词：必须和你机器人设置里的一模一样！
-KEYWORD = "AI"
-
-def get_github_trending():
-    """抓取 GitHub Trending Top 5"""
+def get_data():
+    """抓取 GitHub 今日最火的 5 个项目"""
     url = "https://api.gitterapp.com/"
     try:
-        r = requests.get(url, timeout=10)
-        repos = r.json()[:5]
-        return "\n".join([f"- **{i['author']}/{i['name']}**: {i['description']} (⭐{i['stars']})" for i in repos])
-    except:
-        return "GitHub 抓取失败"
-
-def get_hf_papers():
-    """抓取 Hugging Face Daily Papers Top 5"""
-    url = "https://huggingface.co/api/daily_papers"
-    try:
-        r = requests.get(url, timeout=10)
-        papers = r.json()[:5]
-        return "\n".join([f"- **{p['paper']['title']}**: {p['paper']['summary'][:100]}..." for p in papers])
-    except:
-        return "HF 论文抓取失败"
+        repos = requests.get(url, timeout=15).json()[:5]
+        return "\n".join([f"- **{r['author']}/{r['name']}**: {r['description']}" for r in repos])
+    except Exception as e:
+        return f"数据抓取异常: {e}"
 
 def ask_ai(content):
     """调用 AI 总结内容"""
-    # 这里默认使用 DeepSeek API 地址，如果你用的是 One API 请更换为你的中转地址
-    api_url = "https://api.deepseek.com/v1/chat/completions"
+    # 如果你是用 One API 或中转，请修改下面这个 URL
+    api_url = "https://api.deepseek.com/v1/chat/completions" 
     
     headers = {
         "Authorization": f"Bearer {AI_KEY}",
         "Content-Type": "application/json"
     }
     
-    prompt = f"""
-    你是一个资深科技博主。请根据以下原始信息，整理出一份极其精炼的微信风格技术简报。
-    要求：
-    1. 必须在开头第一行包含关键词：{KEYWORD}
-    2. 使用 Markdown 格式，多用加粗和列表，让手机端易读。
-    3. 将 GitHub 项目和 HF 论文分开展示，并对每个点进行一句话中文核心点点评。
-    4. 结尾加一句幽默的『极客金句』。
-    
-    以下是原始信息：
-    {content}
-    """
-    
     data = {
-        "model": "deepseek-chat", # 这里可以根据你的 API 支持的模型来换，如 gpt-4o, gemini-pro
-        "messages": [{"role": "user", "content": prompt}],
+        "model": "deepseek-chat", # 请确认你的 API 支持这个模型名
+        "messages": [{"role": "user", "content": f"请简要总结以下技术新闻：\n{content}"}],
         "temperature": 0.7
     }
     
     try:
-        res = requests.post(api_url, headers=headers, json=data, timeout=30).json()
-        return res['choices'][0]['message']['content']
+        response = requests.post(api_url, headers=headers, json=data, timeout=30)
+        res_json = response.json()
+        
+        # 调试：如果在 Actions 日志里看到这行，能帮你定位 API 报错
+        if "choices" not in res_json:
+            return f"AI 接口报错了！返回内容是: {res_json}"
+            
+        return res_json['choices'][0]['message']['content']
     except Exception as e:
-        return f"AI 总结出现异常: {e}"
+        return f"AI 请求彻底失败: {e}"
 
 def send_dingtalk(text):
-    """推送至钉钉"""
+    """发送到钉钉 (带上关键词强制通行)"""
+    safe_text = f"### {MY_KEYWORD} \n\n {text}"
     payload = {
         "msgtype": "markdown",
-        "markdown": {
-            "title": "今日前沿 AI 简报",
-            "text": text
-        }
+        "markdown": {"title": "今日资讯", "text": safe_text}
     }
-    
-    response = requests.post(WEBHOOK, json=payload)
-    result = response.json()
-    
-    if result.get("errcode") == 0:
-        print("✅ 推送成功！")
+    r = requests.post(WEBHOOK, json=payload).json()
+    if r.get("errcode") == 0:
+        print("✅ 推送成功")
     else:
-        print(f"❌ 推送失败: {result.get('errmsg')}")
-        sys.exit(1)
+        print(f"❌ 钉钉拒绝: {r.get('errmsg')}")
 
 if __name__ == "__main__":
-    # 步骤：组合数据 -> 问 AI -> 发现场
-    print("🚀 正在收集数据...")
-    gh_data = get_github_trending()
-    hf_data = get_hf_papers()
-    
-    combined_content = f"--- GitHub Trending ---\n{gh_data}\n\n--- HF Daily Papers ---\n{hf_data}"
-    
-    print("🤖 正在请求 AI 总结...")
-    final_report = ask_ai(combined_content)
-    
-    print("📡 正在推送到钉钉...")
-    send_dingtalk(final_report)
+    print("🚀 开始收集...")
+    raw = get_data()
+    print("🤖 正在请教 AI...")
+    summary = ask_ai(raw)
+    print("📡 准备发送...")
+    send_dingtalk(summary)
