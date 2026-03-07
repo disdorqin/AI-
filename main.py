@@ -5,7 +5,7 @@ import time
 # 核心变量
 WEBHOOK = os.getenv("DINGTALK_WEBHOOK")
 AI_KEY = os.getenv("LLM_API_KEY", "").strip()
-MY_KEYWORD = "AI简报" 
+MY_KEYWORD = "AI" 
 
 def get_github_repos():
     """抓取最新、最热的 AI 开源项目"""
@@ -57,7 +57,7 @@ def ask_ai_with_retry(github_content, news_content, retries=3):
     """
 
     data = {
-        "model": "qwen-plus", 
+        "model": "qwen3.5-plus", 
         "messages": [
             {"role": "system", "content": "你是一个精准、高效的科技情报助手。"},
             {"role": "user", "content": prompt}
